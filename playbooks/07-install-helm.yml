@@ -1,0 +1,35 @@
+---
+- name: Install Helm package manager
+  hosts: k8s_masters[0]
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Download Helm installation script
+      get_url:
+        url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+        dest: /tmp/get_helm.sh
+        mode: '0755'
+
+    - name: Install Helm
+      shell: |
+        /tmp/get_helm.sh
+      register: helm_install_result
+
+    - name: Verify Helm installation
+      shell: |
+        helm version
+      register: helm_version
+      when: helm_install_result is succeeded
+
+    - name: Display Helm version
+      debug:
+        msg: "{{ helm_version.stdout_lines }}"
+      when: helm_version is succeeded
+
+    - name: Create Helm repositories directory
+      file:
+        path: /root/.config/helm
+        state: directory
+        mode: '0755'
+      when: helm_install_result is succeeded

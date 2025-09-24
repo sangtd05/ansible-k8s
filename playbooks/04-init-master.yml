@@ -1,0 +1,73 @@
+---
+- name: Initialize Kubernetes master node
+  hosts: k8s_masters[0]
+  become: yes
+  gather_facts: yes
+  vars:
+    init_master: true
+
+  tasks:
+    - name: Create kubeadm configuration
+      template:
+        src: ../templates/kubeadm-config.yaml.j2
+        dest: /tmp/kubeadm-config.yaml
+        mode: '0644'
+
+    - name: Initialize Kubernetes cluster
+      command: kubeadm init --config=/tmp/kubeadm-config.yaml
+      register: kubeadm_init
+      args:
+        creates: /etc/kubernetes/admin.conf
+
+    - name: Create .kube directory for root user
+      file:
+        path: /root/.kube
+        state: directory
+        mode: '0755'
+
+    - name: Copy admin.conf to .kube/config
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /root/.kube/config
+        remote_src: yes
+        mode: '0644'
+
+    - name: Get join command
+      command: kubeadm token create --print-join-command
+      register: join_command
+      when: kubeadm_init is succeeded
+
+    - name: Save join command to file
+      copy:
+        content: "{{ join_command.stdout }}"
+        dest: /tmp/join-command.sh
+        mode: '0755'
+      when: join_command is succeeded
+
+    - name: Install Flannel CNI
+      shell: |
+        kubectl apply -f {{ flannel_manifest_url }}
+      when: kubeadm_init is succeeded
+
+    - name: Wait for nodes to be ready
+      shell: kubectl get nodes --no-headers | grep -v Ready | wc -l
+      register: not_ready_nodes
+      until: not_ready_nodes.stdout == "0"
+      retries: 30
+      delay: 10
+      when: kubeadm_init is succeeded
+
+    - name: Display join command
+      debug:
+        msg: "{{ join_command.stdout }}"
+      when: join_command is succeeded
+
+    - name: Display cluster info
+      shell: kubectl cluster-info
+      register: cluster_info
+      when: kubeadm_init is succeeded
+
+    - name: Show cluster information
+      debug:
+        msg: "{{ cluster_info.stdout_lines }}"
+      when: cluster_info is succeeded

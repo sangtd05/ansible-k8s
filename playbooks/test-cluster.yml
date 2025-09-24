@@ -1,0 +1,62 @@
+---
+- name: Test Kubernetes cluster functionality
+  hosts: k8s_masters[0]
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Check cluster nodes status
+      shell: |
+        kubectl get nodes -o wide
+      register: nodes_status
+
+    - name: Display nodes status
+      debug:
+        msg: "{{ nodes_status.stdout_lines }}"
+
+    - name: Check system pods status
+      shell: |
+        kubectl get pods -A
+      register: pods_status
+
+    - name: Display pods status
+      debug:
+        msg: "{{ pods_status.stdout_lines }}"
+
+    - name: Check ingress controller status
+      shell: |
+        kubectl get pods -n ingress-nginx
+      register: ingress_status
+
+    - name: Display ingress controller status
+      debug:
+        msg: "{{ ingress_status.stdout_lines }}"
+
+    - name: Test sample application
+      shell: |
+        kubectl get pods -n sample-app
+      register: sample_app_status
+
+    - name: Display sample application status
+      debug:
+        msg: "{{ sample_app_status.stdout_lines }}"
+
+    - name: Check cluster info
+      shell: |
+        kubectl cluster-info
+      register: cluster_info
+
+    - name: Display cluster information
+      debug:
+        msg: "{{ cluster_info.stdout_lines }}"
+
+    - name: Test DNS resolution
+      shell: |
+        kubectl run test-dns --image=busybox --rm -it --restart=Never -- nslookup kubernetes.default
+      register: dns_test
+      failed_when: false
+
+    - name: Display DNS test result
+      debug:
+        msg: "{{ dns_test.stdout_lines }}"
+      when: dns_test is succeeded

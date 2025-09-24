@@ -1,0 +1,9 @@
+---
+# Main playbook to deploy Kubernetes cluster with Nginx Ingress
+- import_playbook: playbooks/01-prepare-nodes.yml
+- import_playbook: playbooks/02-install-containerd.yml
+- import_playbook: playbooks/03-install-k8s.yml
+- import_playbook: playbooks/07-install-helm.yml
+- import_playbook: playbooks/04-init-master.yml
+- import_playbook: playbooks/05-join-workers.yml
+- import_playbook: playbooks/06-install-nginx-ingress.yml

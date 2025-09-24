@@ -1,0 +1,91 @@
+---
+- name: Clean up Kubernetes cluster
+  hosts: k8s_cluster
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Drain and delete nodes (master)
+      shell: |
+        kubectl drain {{ inventory_hostname }} --ignore-daemonsets --delete-emptydir-data --force
+      delegate_to: "{{ groups['k8s_masters'][0] }}"
+      when: inventory_hostname in groups['k8s_masters']
+      failed_when: false
+
+    - name: Reset kubeadm (master)
+      shell: |
+        kubeadm reset --force
+      when: inventory_hostname in groups['k8s_masters']
+      failed_when: false
+
+    - name: Reset kubeadm (workers)
+      shell: |
+        kubeadm reset --force
+      when: inventory_hostname in groups['k8s_workers']
+      failed_when: false
+
+    - name: Remove Kubernetes packages
+      apt:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+          - containerd.io
+        state: absent
+        purge: yes
+
+    - name: Remove Kubernetes directories
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/kubernetes
+        - /var/lib/kubelet
+        - /var/lib/etcd
+        - /etc/cni/net.d
+        - /opt/cni/bin
+        - /var/lib/containerd
+        - /run/containerd
+        - /etc/containerd
+
+    - name: Remove Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] {{ docker_repo_url }} {{ ansible_distribution_release }} stable"
+        state: absent
+
+    - name: Remove Kubernetes repository
+      apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] {{ kubernetes_repo_url }} /"
+        state: absent
+        filename: kubernetes
+
+    - name: Remove GPG keys
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+        - /etc/apt/trusted.gpg.d/docker.gpg
+
+    - name: Remove iptables rules
+      shell: |
+        iptables -F
+        iptables -t nat -F
+        iptables -t mangle -F
+        iptables -X
+      failed_when: false
+
+    - name: Remove firewall rules
+      ufw:
+        state: disabled
+
+    - name: Restart network
+      systemd:
+        name: systemd-networkd
+        state: restarted
+      failed_when: false
+
+    - name: Clean package cache
+      apt:
+        autoclean: yes
+        autoremove: yes

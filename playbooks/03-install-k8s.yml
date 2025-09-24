@@ -1,0 +1,59 @@
+---
+- name: Install Kubernetes components
+  hosts: k8s_cluster
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Add Kubernetes GPG key
+      apt_key:
+        url: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version | regex_replace('^([0-9]+\\.[0-9]+).*', '\\1') }}/deb/Release.key
+        state: present
+
+    - name: Add Kubernetes repository
+      apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] {{ kubernetes_repo_url }} /"
+        state: present
+        filename: kubernetes
+
+    - name: Update package cache
+      apt:
+        update_cache: yes
+
+    - name: Install Kubernetes components
+      apt:
+        name:
+          - kubelet={{ kubelet_version }}-1.1
+          - kubeadm={{ kubeadm_version }}-1.1
+          - kubectl={{ kubectl_version }}-1.1
+        state: present
+        update_cache: yes
+
+    - name: Hold Kubernetes packages to prevent automatic updates
+      dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      loop:
+        - kubelet
+        - kubeadm
+        - kubectl
+
+    - name: Configure kubelet systemd service
+      template:
+        src: ../templates/kubelet.service.j2
+        dest: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+        mode: '0644'
+      notify: restart kubelet
+
+    - name: Start and enable kubelet
+      systemd:
+        name: kubelet
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+  handlers:
+    - name: restart kubelet
+      systemd:
+        name: kubelet
+        state: restarted

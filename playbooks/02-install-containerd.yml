@@ -1,0 +1,92 @@
+---
+- name: Install and configure containerd
+  hosts: k8s_cluster
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] {{ docker_repo_url }} {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Update package cache
+      apt:
+        update_cache: yes
+
+    - name: Install containerd
+      apt:
+        name: "containerd.io={{ containerd_version }}-1"
+        state: present
+        update_cache: yes
+
+    - name: Create containerd configuration directory
+      file:
+        path: "{{ containerd_config_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Generate containerd configuration
+      template:
+        src: ../templates/containerd-config.toml.j2
+        dest: "{{ containerd_config_dir }}/config.toml"
+        mode: '0644'
+      notify: restart containerd
+
+    - name: Create containerd systemd drop-in directory
+      file:
+        path: /etc/systemd/system/containerd.service.d
+        state: directory
+        mode: '0755'
+
+    - name: Configure containerd systemd service
+      copy:
+        content: |
+          [Service]
+          ExecStart=
+          ExecStart=/usr/bin/containerd
+        dest: /etc/systemd/system/containerd.service.d/override.conf
+        mode: '0644'
+      notify:
+        - reload systemd
+        - restart containerd
+
+    - name: Start and enable containerd
+      systemd:
+        name: containerd
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+    - name: Install runc
+      apt:
+        name: runc
+        state: present
+
+    - name: Install CNI plugins
+      unarchive:
+        src: https://github.com/containernetworking/plugins/releases/download/v1.3.0/cni-plugins-linux-amd64-v1.3.0.tgz
+        dest: /opt/cni/bin
+        remote_src: yes
+        mode: '0755'
+
+    - name: Create CNI configuration directory
+      file:
+        path: /etc/cni/net.d
+        state: directory
+        mode: '0755'
+
+  handlers:
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: restart containerd
+      systemd:
+        name: containerd
+        state: restarted

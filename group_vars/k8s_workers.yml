@@ -1,0 +1,30 @@
+---
+# Variables specific to Kubernetes worker nodes
+
+# Worker node configuration
+worker_node_type: "worker"
+kubelet_extra_args: "--node-labels=node-role.kubernetes.io/worker="
+
+# Worker specific firewall rules
+worker_firewall_rules:
+  - port: 10250
+    protocol: tcp
+    description: "Kubelet API"
+  - port: 10255
+    protocol: tcp
+    description: "Read-only Kubelet API"
+  - port: 30000-32767
+    protocol: tcp
+    description: "NodePort Services"
+
+# Worker node labels and taints
+worker_labels:
+  - "node-role.kubernetes.io/worker="
+  - "kubernetes.io/arch={{ ansible_architecture }}"
+  - "kubernetes.io/os=linux"
+
+# Resource limits for worker nodes
+worker_resource_limits:
+  max_pods: 110
+  cpu_limit: "2"
+  memory_limit: "4Gi"

@@ -1,0 +1,96 @@
+---
+- name: Install Nginx Ingress Controller
+  hosts: k8s_masters[0]
+  become: yes
+  gather_facts: yes
+  vars:
+    ingress_nginx_namespace: "ingress-nginx"
+    ingress_nginx_version: "{{ ingress_nginx_version | default('1.8.1') }}"
+
+  tasks:
+    - name: Create ingress-nginx namespace
+      shell: |
+        kubectl create namespace {{ ingress_nginx_namespace }} --dry-run=client -o yaml | kubectl apply -f -
+      register: namespace_result
+
+    - name: Add ingress-nginx Helm repository
+      shell: |
+        helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+        helm repo update
+      register: helm_repo_result
+      failed_when: false
+
+    - name: Install Nginx Ingress Controller using Helm
+      shell: |
+        helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+          --namespace {{ ingress_nginx_namespace }} \
+          --version {{ ingress_nginx_version }} \
+          --set controller.service.type=LoadBalancer \
+          --set controller.service.externalIPs[0]={{ load_balancer_ip | default('') }} \
+          --set controller.admissionWebhooks.enabled=false \
+          --set controller.metrics.enabled=true \
+          --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-type"=nlb \
+          --wait
+      register: helm_install_result
+      when: helm_repo_result is succeeded
+
+    - name: Wait for ingress controller to be ready
+      shell: |
+        kubectl wait --namespace {{ ingress_nginx_namespace }} \
+          --for=condition=ready pod \
+          --selector=app.kubernetes.io/component=controller \
+          --timeout=300s
+      register: wait_result
+      when: helm_install_result is succeeded
+
+    - name: Get ingress controller service
+      shell: |
+        kubectl get svc -n {{ ingress_nginx_namespace }} ingress-nginx-controller
+      register: ingress_service
+      when: wait_result is succeeded
+
+    - name: Display ingress controller service information
+      debug:
+        msg: "{{ ingress_service.stdout_lines }}"
+      when: ingress_service is succeeded
+
+    - name: Create sample ingress for testing
+      template:
+        src: ../templates/sample-ingress.yaml.j2
+        dest: /tmp/sample-ingress.yaml
+        mode: '0644'
+
+    - name: Apply sample ingress
+      shell: |
+        kubectl apply -f /tmp/sample-ingress.yaml
+      register: sample_ingress_result
+      when: wait_result is succeeded
+
+    - name: Display ingress status
+      shell: |
+        kubectl get ingress -A
+      register: ingress_status
+      when: sample_ingress_result is succeeded
+
+    - name: Show ingress status
+      debug:
+        msg: "{{ ingress_status.stdout_lines }}"
+      when: ingress_status is succeeded
+
+    - name: Display cluster information
+      shell: |
+        echo "=== Cluster Nodes ==="
+        kubectl get nodes -o wide
+        echo ""
+        echo "=== Ingress Controller ==="
+        kubectl get pods -n {{ ingress_nginx_namespace }}
+        echo ""
+        echo "=== Services ==="
+        kubectl get svc -n {{ ingress_nginx_namespace }}
+      register: cluster_info
+      when: wait_result is succeeded
+
+    - name: Show final cluster information
+      debug:
+        msg: "{{ cluster_info.stdout_lines }}"
+      when: cluster_info is succeeded

@@ -1,0 +1,49 @@
+# Ansible
+*.retry
+.ansible/
+ansible.log
+
+# SSH keys
+*.pem
+*.key
+id_rsa*
+known_hosts
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Logs
+*.log
+logs/
+
+# Backup files
+*.bak
+*.backup
+
+# Kubernetes
+kubeconfig
+admin.conf
+join-command.sh
