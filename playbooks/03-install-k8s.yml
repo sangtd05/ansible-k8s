@@ -5,20 +5,41 @@
   gather_facts: yes
 
   tasks:
-    - name: Add Kubernetes GPG key
-      apt_key:
-        url: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version | regex_replace('^([0-9]+\\.[0-9]+).*', '\\1') }}/deb/Release.key
-        state: present
-
-    - name: Add Kubernetes repository
-      apt_repository:
-        repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] {{ kubernetes_repo_url }} /"
-        state: present
-        filename: kubernetes
-
     - name: Update package cache
       apt:
         update_cache: yes
+
+    - name: Install required packages for Kubernetes repository
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gpg
+        state: present
+
+    - name: Create Kubernetes keyring directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Download Kubernetes GPG key
+      shell: |
+        curl -fsSL https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version | regex_replace('^([0-9]+\\.[0-9]+).*', '\\1') }}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      args:
+        creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+    - name: Add Kubernetes repository
+      shell: |
+        echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] {{ kubernetes_repo_url }} /' | tee /etc/apt/sources.list.d/kubernetes.list
+      args:
+        creates: /etc/apt/sources.list.d/kubernetes.list
+
+    - name: Update package cache after adding Kubernetes repository
+      apt:
+        update_cache: yes
+
 
     - name: Install Kubernetes components
       apt:
@@ -27,30 +48,33 @@
           - kubeadm={{ kubeadm_version }}-1.1
           - kubectl={{ kubectl_version }}-1.1
         state: present
-        update_cache: yes
 
     - name: Hold Kubernetes packages to prevent automatic updates
-      dpkg_selections:
-        name: "{{ item }}"
-        selection: hold
-      loop:
-        - kubelet
-        - kubeadm
-        - kubectl
+      shell: |
+        apt-mark hold kubelet kubeadm kubectl
 
-    - name: Configure kubelet systemd service
-      template:
-        src: ../templates/kubelet.service.j2
-        dest: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
-        mode: '0644'
-      notify: restart kubelet
+    - name: Enable IP forwarding
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: '1'
+        state: present
+        reload: yes
+
+    - name: Enable IP forwarding permanently
+      lineinfile:
+        path: /etc/sysctl.conf
+        regexp: '^#net\.ipv4\.ip_forward=1'
+        line: 'net.ipv4.ip_forward=1'
+        state: present
+
+    - name: Apply sysctl configuration
+      shell: sysctl -p
 
     - name: Start and enable kubelet
       systemd:
         name: kubelet
         state: started
         enabled: yes
-        daemon_reload: yes
 
   handlers:
     - name: restart kubelet

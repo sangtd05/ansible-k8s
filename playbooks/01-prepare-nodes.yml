@@ -119,23 +119,15 @@
         state: enabled
         policy: deny
 
-    - name: Create containerd directory
+    - name: Create required directories
       file:
-        path: "{{ containerd_config_dir }}"
+        path: "{{ item }}"
         state: directory
         mode: '0755'
-
-    - name: Create kubelet directory
-      file:
-        path: /var/lib/kubelet
-        state: directory
-        mode: '0755'
-
-    - name: Create kubeadm directory
-      file:
-        path: /etc/kubernetes
-        state: directory
-        mode: '0755'
+      loop:
+        - "{{ containerd_config_dir }}"
+        - /var/lib/kubelet
+        - /etc/kubernetes
 
   handlers:
     - name: restart chrony

@@ -30,7 +30,7 @@
           - kubelet
           - kubeadm
           - kubectl
-          - containerd.io
+          - containerd
         state: absent
         purge: yes
 
@@ -48,16 +48,11 @@
         - /run/containerd
         - /etc/containerd
 
-    - name: Remove Docker repository
-      apt_repository:
-        repo: "deb [arch=amd64] {{ docker_repo_url }} {{ ansible_distribution_release }} stable"
+    - name: Remove Kubernetes repository
+      file:
+        path: /etc/apt/sources.list.d/kubernetes.list
         state: absent
 
-    - name: Remove Kubernetes repository
-      apt_repository:
-        repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] {{ kubernetes_repo_url }} /"
-        state: absent
-        filename: kubernetes
 
     - name: Remove GPG keys
       file:
@@ -65,7 +60,6 @@
         state: absent
       loop:
         - /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-        - /etc/apt/trusted.gpg.d/docker.gpg
 
     - name: Remove iptables rules
       shell: |

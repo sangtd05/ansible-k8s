@@ -4,7 +4,7 @@ localAPIEndpoint:
   advertiseAddress: "{{ ansible_default_ipv4.address }}"
   bindPort: 6443
 nodeRegistration:
-  criSocket: unix://{{ containerd_socket }}
+  criSocket: unix:///run/containerd/containerd.sock
   kubeletExtraArgs:
     node-labels: "node-role.kubernetes.io/master="
     register-with-taints: "node-role.kubernetes.io/master=:NoSchedule"

@@ -44,9 +44,9 @@
         mode: '0755'
       when: join_command is succeeded
 
-    - name: Install Flannel CNI
+    - name: Install Calico CNI
       shell: |
-        kubectl apply -f {{ flannel_manifest_url }}
+        kubectl apply -f {{ calico_manifest_url }}
       when: kubeadm_init is succeeded
 
     - name: Wait for nodes to be ready

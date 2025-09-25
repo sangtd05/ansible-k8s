@@ -5,7 +5,7 @@
 - ✅ Cài đặt Kubernetes cluster (HA hoặc single master)
 - ✅ Hỗ trợ containerd runtime
 - ✅ Cài đặt Nginx Ingress Controller
-- ✅ Cấu hình Flannel CNI
+- ✅ Cấu hình Calico CNI
 - ✅ Tự động join worker nodes
 - ✅ Cài đặt Helm package manager
 - ✅ Sample application để test
@@ -47,8 +47,6 @@ ansible-k8s-setup/
 │   ├── test-cluster.yml       # Test cluster
 │   └── cleanup.yml            # Dọn dẹp cluster
 ├── templates/
-│   ├── containerd-config.toml.j2
-│   ├── kubelet.service.j2
 │   ├── kubeadm-config.yaml.j2
 │   └── sample-ingress.yaml.j2
 ├── site.yml                   # Playbook chính
@@ -251,15 +249,27 @@ make clean
 Chỉnh sửa trong `group_vars/all.yml`:
 
 ```yaml
-kubernetes_version: "1.28.2"
-kubelet_version: "1.28.2"
-kubectl_version: "1.28.2"
-kubeadm_version: "1.28.2"
+kubernetes_version: "1.33.2"
+kubelet_version: "1.33.2"
+kubectl_version: "1.33.2"
+kubeadm_version: "1.33.2"
 ```
 
 ### Thay đổi CNI plugin
 
-Thay đổi Flannel sang Calico hoặc Weave Net trong `group_vars/all.yml`.
+Thay đổi Calico sang Flannel hoặc Weave Net trong `group_vars/all.yml`:
+
+```yaml
+# Cho Flannel
+flannel_version: "0.22.3"
+flannel_manifest_url: "https://raw.githubusercontent.com/flannel-io/flannel/v{{ flannel_version }}/Documentation/kube-flannel.yml"
+pod_network_cidr: "10.244.0.0/16"
+
+# Cho Calico (mặc định)
+calico_version: "3.27.0"
+calico_manifest_url: "https://raw.githubusercontent.com/projectcalico/calico/v{{ calico_version }}/manifests/calico.yaml"
+pod_network_cidr: "192.168.0.0/16"
+```
 
 ### Thêm node labels/taints
 

@@ -8,24 +8,24 @@ ntp_servers:
   - "time.google.com"
 
 # Container runtime configuration
-containerd_version: "1.7.6"
+containerd_version: "latest"
 containerd_config_dir: "/etc/containerd"
 containerd_socket: "/run/containerd/containerd.sock"
 
 # Kubernetes configuration
-kubernetes_version: "1.28.2"
-kubelet_version: "1.28.2"
-kubectl_version: "1.28.2"
-kubeadm_version: "1.28.2"
+kubernetes_version: "1.33.2"
+kubelet_version: "1.33.2"
+kubectl_version: "1.33.2"
+kubeadm_version: "1.33.2"
 
-# Cluster networking
-pod_network_cidr: "10.244.0.0/16"
+# Cluster networking (Calico default CIDR)
+pod_network_cidr: "192.168.0.0/16"
 service_cidr: "10.96.0.0/12"
 cluster_dns: "10.96.0.10"
 
-# CNI plugin (Flannel)
-flannel_version: "0.22.3"
-flannel_manifest_url: "https://raw.githubusercontent.com/flannel-io/flannel/v{{ flannel_version }}/Documentation/kube-flannel.yml"
+# CNI plugin (Calico)
+calico_version: "3.27.0"
+calico_manifest_url: "https://raw.githubusercontent.com/projectcalico/calico/v{{ calico_version }}/manifests/calico.yaml"
 
 # System requirements
 min_memory_gb: 2
