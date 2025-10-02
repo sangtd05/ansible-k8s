@@ -1,61 +1,6 @@
 # Ansible Kubernetes Setup
 
-## 🚀 Tính năng
-
-- ✅ Cài đặt Kubernetes cluster (HA hoặc single master)
-- ✅ Hỗ trợ containerd runtime
-- ✅ Cài đặt Nginx Ingress Controller
-- ✅ Cấu hình Calico CNI
-- ✅ Tự động join worker nodes
-- ✅ Cài đặt Helm package manager
-- ✅ Sample application để test
-- ✅ Hỗ trợ Ubuntu/Debian
-
-## 📋 Yêu cầu hệ thống
-
-### Máy chủ
-- **OS**: Ubuntu 20.04+ hoặc Debian 11+
-- **RAM**: Tối thiểu 2GB (khuyến nghị 4GB+)
-- **CPU**: Tối thiểu 2 cores
-- **Disk**: Tối thiểu 20GB
-- **Network**: Kết nối internet
-
-### Máy điều khiển (Ansible)
-- Ansible 2.9+
-- Python 3.6+
-- SSH access đến tất cả nodes
-
-## 🏗️ Cấu trúc dự án
-
-```
-ansible-k8s-setup/
-├── ansible.cfg                 # Cấu hình Ansible
-├── inventory/
-│   └── hosts.yml              # Inventory file
-├── group_vars/
-│   ├── all.yml                # Biến global
-│   ├── k8s_masters.yml        # Biến cho master nodes
-│   └── k8s_workers.yml        # Biến cho worker nodes
-├── playbooks/
-│   ├── 01-prepare-nodes.yml   # Chuẩn bị nodes
-│   ├── 02-install-containerd.yml # Cài đặt containerd
-│   ├── 03-install-k8s.yml     # Cài đặt Kubernetes
-│   ├── 04-init-master.yml     # Khởi tạo master
-│   ├── 05-join-workers.yml    # Join worker nodes
-│   ├── 06-install-nginx-ingress.yml # Cài đặt Nginx Ingress
-│   ├── 07-install-helm.yml    # Cài đặt Helm
-│   ├── test-cluster.yml       # Test cluster
-│   └── cleanup.yml            # Dọn dẹp cluster
-├── templates/
-│   ├── kubeadm-config.yaml.j2
-│   └── sample-ingress.yaml.j2
-├── site.yml                   # Playbook chính
-├── requirements.yml           # Ansible dependencies
-├── Makefile                   # Commands tiện ích
-└── README.md
-```
-
-## ⚙️ Cấu hình
+## Cấu hình
 
 ### 1. Cập nhật Inventory
 
@@ -96,7 +41,7 @@ Chỉnh sửa các file trong `group_vars/` nếu cần:
 - `group_vars/k8s_masters.yml`: Cấu hình master nodes
 - `group_vars/k8s_workers.yml`: Cấu hình worker nodes
 
-## 🚀 Triển khai
+## Triển khai
 
 ### Cài đặt dependencies
 
@@ -140,7 +85,7 @@ make install-ingress
 make test-cluster
 ```
 
-## 🔧 Sử dụng Makefile
+## Sử dụng Makefile
 
 ```bash
 make help                    # Hiển thị tất cả commands
@@ -152,7 +97,7 @@ make test-cluster          # Test cluster
 make clean                 # Dọn dẹp cluster (CẢNH BÁO!)
 ```
 
-## 📊 Kiểm tra cluster
+## Kiểm tra cluster
 
 Sau khi triển khai thành công, bạn có thể kiểm tra:
 
@@ -174,7 +119,7 @@ kubectl get pods -n sample-app
 kubectl get ingress -A
 ```
 
-## 🌐 Truy cập ứng dụng
+## Truy cập ứng dụng
 
 Sau khi cài đặt, bạn có thể truy cập sample application:
 
@@ -193,34 +138,6 @@ Sau khi cài đặt, bạn có thể truy cập sample application:
    http://nginx.example.com
    ```
 
-## 🛠️ Troubleshooting
-
-### Lỗi thường gặp
-
-1. **SSH connection failed:**
-   ```bash
-   # Kiểm tra SSH key
-   ssh-add -l
-   # Copy key mới
-   ssh-copy-id root@<node-ip>
-   ```
-
-2. **Kubelet not starting:**
-   ```bash
-   # Kiểm tra logs
-   journalctl -u kubelet -f
-   # Restart kubelet
-   systemctl restart kubelet
-   ```
-
-3. **Pods stuck in Pending:**
-   ```bash
-   # Kiểm tra node resources
-   kubectl describe nodes
-   # Kiểm tra CNI
-   kubectl get pods -n kube-system
-   ```
-
 ### Logs hữu ích
 
 ```bash
@@ -234,7 +151,7 @@ journalctl -u containerd -f
 kubectl logs -n kube-system kube-apiserver-<node-name>
 ```
 
-## 🧹 Dọn dẹp
+## Dọn dẹp
 
 **CẢNH BÁO**: Lệnh này sẽ xóa toàn bộ cluster!
 
@@ -242,18 +159,11 @@ kubectl logs -n kube-system kube-apiserver-<node-name>
 make clean
 ```
 
-## 📝 Tùy chỉnh
+## Tùy chỉnh
 
 ### Thay đổi Kubernetes version
 
-Chỉnh sửa trong `group_vars/all.yml`:
-
-```yaml
-kubernetes_version: "1.33.2"
-kubelet_version: "1.33.2"
-kubectl_version: "1.33.2"
-kubeadm_version: "1.33.2"
-```
+Chỉnh sửa trong `group_vars/all.yml`
 
 ### Thay đổi CNI plugin
 
